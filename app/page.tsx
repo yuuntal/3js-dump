@@ -7,6 +7,8 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    
+    // create cube instance
     const makeInstance = (
       geometry: THREE.BoxGeometry,
       color: THREE.ColorRepresentation,
@@ -22,17 +24,17 @@ export default function Home() {
     };
 
     if (!containerRef.current) return;
-
     // scene constants
+    const scale = 1.3
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
-      75,
+      80,
       window.innerWidth / window.innerHeight,
       0.1,
       1000,
     );
     const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth / scale, window.innerHeight / scale);
     containerRef.current.appendChild(renderer.domElement);
 
     // lighting
@@ -41,25 +43,37 @@ export default function Home() {
     const light = new THREE.DirectionalLight(lightColor, intensity);
     light.position.set(-1, 2, 4);
 
-    // cube
+    
     const geometry = new THREE.BoxGeometry(1, 1, 1, 1);
-    const cube = makeInstance(geometry, 0x44aa88, 0);
+    
+    // cube
+    
+    const cubes = [
+      makeInstance(geometry, 0x44aa88, 0),
+      makeInstance(geometry, 0x8844aa, -2),
+      makeInstance(geometry, 0xaa8844, 2),
+    ];
 
     // add to scene
     scene.add(light);
 
-    // animate cube
-    function animate() {
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.01;
-
+    function render(time: number) {
+      time *= 0.001;
+      
+      cubes.forEach((cube, index) => {
+        const speed = 1 + index * 0.1;
+        const rot = time * speed;
+        cube.rotation.x = rot;
+        cube.rotation.y = rot;
+      });
+      
       renderer.render(scene, camera);
+      requestAnimationFrame(render);
     }
+    requestAnimationFrame(render);
 
     // campos
     camera.position.z = 5;
-    renderer.setAnimationLoop(animate);
-
     // Cleanup
     return () => {
       containerRef.current?.removeChild(renderer.domElement);
