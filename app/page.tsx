@@ -42,7 +42,7 @@ export default function Home() {
 		containerRef.current.appendChild(renderer.domElement);
 
 		const lg = new GUI();
-		lg.add(renderer.domElement, 'title');
+		lg.add(renderer.domElement, 'title').name("ambient color");
 		
 		// OrbitControls
 		const controls = new OrbitControls(camera, renderer.domElement);
