@@ -6,27 +6,12 @@ import checker from "@/public/checker.png";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GUI } from "lil-gui";
 
+import { ManagedMesh } from "./components/Mesh";
+
 export default function Home() {
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		// create cube instance
-		const makeInstance = (
-			geometry: THREE.BoxGeometry,
-			color: THREE.ColorRepresentation,
-			x: number = 0,
-			y: number = 0,
-			z: number = 0,
-		) => {
-			const material = new THREE.MeshPhongMaterial({ color });
-			const cube = new THREE.Mesh(geometry, material);
-
-			scene.add(cube);
-			cube.position.x = x;
-
-			return cube;
-		};
-
 		if (!containerRef.current) return;
 		// scene constants
 		const scale = 1.3;
@@ -41,9 +26,10 @@ export default function Home() {
 		renderer.setSize(window.innerWidth / scale, window.innerHeight / scale);
 		containerRef.current.appendChild(renderer.domElement);
 
+		// gui
 		const lg = new GUI();
-		lg.add(renderer.domElement, 'title').name("ambient color");
-		
+		lg.add(renderer.domElement, "title").name("ambient color");
+
 		// OrbitControls
 		const controls = new OrbitControls(camera, renderer.domElement);
 		controls.target.set(0, 0, 0);
@@ -55,10 +41,41 @@ export default function Home() {
 		const light = new THREE.AmbientLight(lightColor, intensity);
 		light.position.set(-1, 2, 4);
 
-		const geometry = new THREE.BoxGeometry(1, 1, 1, 1);
+		// create different meshes using the generic class
+		const meshes: ManagedMesh[] = [];
 
 		// cube
-		const cubes = [makeInstance(geometry, 0xffffff, 1, 1, 1)];
+		meshes.push(
+			new ManagedMesh(
+				new THREE.BoxGeometry(1, 1, 1),
+				new THREE.MeshPhongMaterial({ color: 0x44aa88 }),
+				0,
+				0,
+				0,
+			),
+		);
+
+		// sphere
+		meshes.push(
+			new ManagedMesh(
+				new THREE.SphereGeometry(0.7, 16, 16),
+				new THREE.MeshPhongMaterial({ color: 0x8844aa }),
+				-2,
+				0,
+				0,
+			),
+		);
+
+		// cone
+		meshes.push(
+			new ManagedMesh(
+				new THREE.ConeGeometry(0.6, 1.5, 16),
+				new THREE.MeshPhongMaterial({ color: 0xaa8844 }),
+				2,
+				0,
+				0,
+			),
+		);
 
 		// plane
 		const planeSize = 40;
@@ -82,15 +99,35 @@ export default function Home() {
 		// add to scene
 		scene.add(light);
 		scene.add(mesh);
+		meshes.forEach((m) => m.addTo(scene));
 
 		function render(time: number) {
+			time *= 0.001;
+
+			meshes.forEach((m, ndx) => {
+				const speed = 1 + ndx * 0.1;
+				const rot = time * speed;
+				m.mesh.rotation.x = rot;
+				m.mesh.rotation.y = rot;
+			});
+
 			renderer.render(scene, camera);
 			requestAnimationFrame(render);
 		}
 		requestAnimationFrame(render);
-		// Cleanup
+
+		// cleanup
 		return () => {
 			containerRef.current?.removeChild(renderer.domElement);
+
+			meshes.forEach((m) => {
+				m.removeFrom(scene);
+				m.dispose();
+			});
+
+			// clean up plane
+			planeGeo.dispose();
+			planeMat.dispose();
 
 			renderer.dispose();
 		};
