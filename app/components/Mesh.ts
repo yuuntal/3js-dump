@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export class ManagedMesh {
+export class Mesh {
     mesh: THREE.Mesh;
 
     constructor(

@@ -4,9 +4,16 @@ import * as THREE from "three";
 import { useEffect, useRef } from "react";
 import checker from "@/public/checker.png";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
 import { GUI } from "lil-gui";
 
-import { ManagedMesh } from "./components/Mesh";
+import {
+	EffectComposer,
+	RenderPass,
+	AsciiEffect,
+} from "three/examples/jsm/Addons.js";
+
+import { Mesh } from "./components/Mesh";
 
 export default function Home() {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -24,14 +31,30 @@ export default function Home() {
 		camera.position.z = 2;
 		const renderer = new THREE.WebGLRenderer();
 		renderer.setSize(window.innerWidth / scale, window.innerHeight / scale);
-		containerRef.current.appendChild(renderer.domElement);
+
+		// ascii effect
+		const effect = new AsciiEffect(renderer, " .:-+*=%@#&()", { invert: true });
+		effect.setSize(window.innerWidth / scale, window.innerHeight / scale);
+		effect.domElement.style.color = "white";
+		effect.domElement.style.backgroundColor = "black";
+
+		// composer and passes
+		const composer = new EffectComposer(renderer);
+		const renderPass = new RenderPass(scene, camera);
+		composer.addPass(renderPass);
+		// const luminosityHighPassShader = new ShaderPass(LuminosityHighPassShader);
+		// composer.addPass(luminosityHighPassShader);
+		// const copyPass = new ShaderPass(CopyShader);
+		// composer.addPass(copyPass);
+
+		containerRef.current.appendChild(effect.domElement);
 
 		// gui
 		const lg = new GUI();
-		lg.add(renderer.domElement, "title").name("ambient color");
+		lg.add(effect.domElement, "title").name("ambient color");
 
 		// OrbitControls
-		const controls = new OrbitControls(camera, renderer.domElement);
+		const controls = new OrbitControls(camera, effect.domElement);
 		controls.target.set(0, 0, 0);
 		controls.update();
 
@@ -42,11 +65,11 @@ export default function Home() {
 		light.position.set(-1, 2, 4);
 
 		// create different meshes using the generic class
-		const meshes: ManagedMesh[] = [];
+		const meshes: Mesh[] = [];
 
 		// cube
 		meshes.push(
-			new ManagedMesh(
+			new Mesh(
 				new THREE.BoxGeometry(1, 1, 1),
 				new THREE.MeshPhongMaterial({ color: 0x44aa88 }),
 				0,
@@ -57,7 +80,7 @@ export default function Home() {
 
 		// sphere
 		meshes.push(
-			new ManagedMesh(
+			new Mesh(
 				new THREE.SphereGeometry(0.7, 16, 16),
 				new THREE.MeshPhongMaterial({ color: 0x8844aa }),
 				-2,
@@ -68,7 +91,7 @@ export default function Home() {
 
 		// cone
 		meshes.push(
-			new ManagedMesh(
+			new Mesh(
 				new THREE.ConeGeometry(0.6, 1.5, 16),
 				new THREE.MeshPhongMaterial({ color: 0xaa8844 }),
 				2,
@@ -111,9 +134,16 @@ export default function Home() {
 				m.mesh.rotation.y = rot;
 			});
 
-			renderer.render(scene, camera);
+			// ascii render
+			effect.render(scene, camera);
 			requestAnimationFrame(render);
+
+			// normal render
+			// renderer.render(scene, camera);
+
+			// composer.render();
 		}
+		// start rendering for the first time
 		requestAnimationFrame(render);
 
 		// cleanup
