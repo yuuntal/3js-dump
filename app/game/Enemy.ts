@@ -3,7 +3,7 @@ import { MazeGrid } from './types';
 import { Disposable } from './types';
 import {
     ENEMY_SPEED, ENEMY_TRIGGER_DIST, ENEMY_WARN_DIST,
-    ENEMY_WAYPOINT_DIST, ENEMY_RESPAWN_DELAY,
+    ENEMY_WAYPOINT_DIST, ENEMY_RESPAWN_DELAY, ENEMY_RETREAT_FACTOR,
     CELL_SIZE, WALL_HEIGHT, PLAYER_HEIGHT,
 } from './constants';
 import { CameraEffects } from './CameraEffects';
@@ -59,7 +59,7 @@ export class Enemy implements Disposable {
 
     private teleportToRandom(avoidCol: number, avoidRow: number): void {
         let col: number, row: number;
-    
+
         do {
             [col, row] = this.randomCell();
         } while (Math.abs(col - avoidCol) + Math.abs(row - avoidRow) < 6);
@@ -95,6 +95,10 @@ export class Enemy implements Disposable {
 
         const dist = this.mesh.position.distanceTo(playerPos);
 
+        // proximity callback (always update this, even if hidden)
+        if (dist < ENEMY_WARN_DIST) {
+            this.onNear?.(dist);
+        }
 
         if (playerHidden) {
             if (dist < ENEMY_WARN_DIST) {
@@ -102,7 +106,7 @@ export class Enemy implements Disposable {
                 const away = new THREE.Vector3()
                     .subVectors(this.mesh.position, playerPos);
                 away.y = 0;
-                away.normalize().multiplyScalar(ENEMY_SPEED * 0.3 * dt);
+                away.normalize().multiplyScalar(ENEMY_SPEED * ENEMY_RETREAT_FACTOR * dt);
                 this.mesh.position.add(away);
             }
 

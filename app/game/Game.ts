@@ -48,16 +48,22 @@ export class Game {
     }
 
     async init(): Promise<void> {
+        await this.loadLevel();
+        this.start();
+    }
 
+    private async loadLevel(): Promise<void> {
+        // 1. Show loading
         this.loadingScreen.setProgress(10);
+        this.hud?.showHint(false); // hide hint during load if present
 
-        // wait for ui
+        // Wait for UI to render
         await new Promise(r => requestAnimationFrame(r));
-
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 50)); // small buffer
 
         const { scene, renderer } = this.gameScene;
 
+        // 2. Heavy work
         this.loadingScreen.setProgress(30);
 
         // maze
@@ -67,7 +73,6 @@ export class Game {
         const walls = buildWallAABBs(grid);
 
         this.loadingScreen.setProgress(50);
-        
         await new Promise(r => setTimeout(r, 20));
 
         // player / camera
@@ -103,18 +108,32 @@ export class Game {
         // audio
         this.audio = new AudioManager(this.player.camera);
 
-        // HUD - needs to be added after loading screen or handled gracefully? 
-        // We pass the same container.
-        this.hud = new HUD(this.gameScene.renderer.domElement.parentElement!);
+        // HUD - reuse existing if available, or create
+        if (!this.hud) {
+            this.hud = new HUD(this.gameScene.renderer.domElement.parentElement!);
+        }
+
+        // Reset HUD state
+        this.sanity = SANITY_MAX;
+        this.won = false;
+        this.elapsed = 0;
         this.hud.setSanity(this.sanity);
         this.hud.setFlashlightOn(true);
-        this.hud.showHint(true);
+        this.hud.showHint(true); // show hint at start of level
 
-        // pointer lock
+        // Bind restart
+        this.hud.onRestart = () => {
+            this.restart();
+        };
+
+        // pointer lock - ensure listeners are bound (idempotent)
+        renderer.domElement.removeEventListener('click', this.onCanvasClick);
+        document.removeEventListener('pointerlockchange', this.onPointerLockChange);
         renderer.domElement.addEventListener('click', this.onCanvasClick);
         document.addEventListener('pointerlockchange', this.onPointerLockChange);
 
         // resize 
+        window.removeEventListener('resize', this.onResize);
         window.addEventListener('resize', this.onResize);
 
         // exit position
@@ -122,15 +141,50 @@ export class Game {
             EXIT_COL * CELL_SIZE, 0, EXIT_ROW * CELL_SIZE,
         );
 
-        this.loadingScreen.setProgress(90);
+        this.loadingScreen.setProgress(85);
 
-        // Force shader compilation to avoid lag
+        // Force shader compilation
         this.gameScene.renderer.compile(this.gameScene.scene, this.player.camera);
+
+        // WARMUP RENDER to fix lag spike
+        // Render from different angles to ensure all geometry/shadows are hot
+        const originalRot = this.player.camera.rotation.clone();
+        const angles = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+        for (const ang of angles) {
+            this.player.camera.rotation.y = ang;
+            this.player.camera.updateMatrixWorld();
+            this.gameScene.render(this.player.camera, 0);
+        }
+        this.player.camera.rotation.copy(originalRot);
+        this.player.camera.updateMatrixWorld();
 
         this.loadingScreen.setProgress(100);
         await new Promise(r => setTimeout(r, 200));
 
         this.loadingScreen.hide();
+    }
+
+    private cleanupLevel(): void {
+        this.running = false;
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+
+        // Dispose level assets
+        if (this.mazeBuilder) this.mazeBuilder.dispose();
+        if (this.player) {
+            this.gameScene.scene.remove(this.player.camera);
+            this.player.dispose();
+        }
+        if (this.flashlight) this.flashlight.dispose();
+        if (this.enemy) this.enemy.dispose();
+        if (this.audio) this.audio.dispose();
+
+        // We keep GameScene (renderer/composer) and HUD instance, but reset HUD state in loadLevel
+    }
+
+    async restart(): Promise<void> {
+        this.cleanupLevel();
+        if (document.pointerLockElement) document.exitPointerLock();
+        await this.loadLevel();
         this.start();
     }
 

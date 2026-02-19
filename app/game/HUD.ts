@@ -10,6 +10,8 @@ export class HUD {
     private proximityEl: HTMLElement;
     private messageTimer = 0;
 
+    onRestart?: () => void;
+
     constructor(container: HTMLElement) {
         this.root = document.createElement('div');
         this.root.id = 'hud-root';
@@ -196,6 +198,16 @@ export class HUD {
         if (t > 0.3) {
             this.messageEl.textContent = t > 0.7 ? 'IT\'S RIGHT BEHIND YOU' : 'SOMETHING IS NEAR...';
             this.messageEl.style.opacity = String(0.3 + t * 0.7);
+        } else {
+            // Check if we are currently showing a proximity message to clear it
+            // We should not clear if it's a generic message (like 'IT SAW YOU') which uses showMessage
+            // But showMessage sets opacity to 1 and uses a timer.
+            // Proximity messages are continuous.
+            // Let's just clear opacity if the text matches proximity strings
+            if (this.messageEl.textContent === 'SOMETHING IS NEAR...' ||
+                this.messageEl.textContent === 'IT\'S RIGHT BEHIND YOU') {
+                this.messageEl.style.opacity = '0';
+            }
         }
     }
 
@@ -252,7 +264,14 @@ export class HUD {
         overlay.style.pointerEvents = 'auto';
         overlay.style.cursor = 'pointer';
         overlay.addEventListener('click', () => {
-            window.location.reload();
+            if (this.onRestart) {
+                // remove overlay
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 1000);
+                this.onRestart();
+            } else {
+                window.location.reload();
+            }
         });
     }
 

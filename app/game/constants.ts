@@ -55,6 +55,7 @@ export const ENEMY_TRIGGER_DIST = 2.5;
 export const ENEMY_WARN_DIST = 14;
 export const ENEMY_WAYPOINT_DIST = 0.4;
 export const ENEMY_RESPAWN_DELAY = 5000;
+export const ENEMY_RETREAT_FACTOR = 3.0;
 
 // Sanity
 export const SANITY_MAX = 100;
