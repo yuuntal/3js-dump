@@ -48,16 +48,16 @@ export class Game {
     }
 
     async init(): Promise<void> {
-        // 1. Show loading
+
         this.loadingScreen.setProgress(10);
 
-        // Wait for UI to render
+        // wait for ui
         await new Promise(r => requestAnimationFrame(r));
-        await new Promise(r => setTimeout(r, 50)); // small buffer
+
+        await new Promise(r => setTimeout(r, 50));
 
         const { scene, renderer } = this.gameScene;
 
-        // 2. Heavy work
         this.loadingScreen.setProgress(30);
 
         // maze
@@ -67,6 +67,7 @@ export class Game {
         const walls = buildWallAABBs(grid);
 
         this.loadingScreen.setProgress(50);
+        
         await new Promise(r => setTimeout(r, 20));
 
         // player / camera
