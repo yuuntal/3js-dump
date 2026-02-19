@@ -16,7 +16,7 @@ import {
 } from './constants';
 import { MAZE_COLS, MAZE_ROWS, CELL_SIZE, WALL_HEIGHT } from './constants';
 
-// Scene setup
+const globalForThree = globalThis as unknown as { sharedRenderer: THREE.WebGLRenderer | undefined };
 
 export class GameScene {
     readonly scene: THREE.Scene;
@@ -32,22 +32,30 @@ export class GameScene {
         this.scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY);
         this.scene.background = new THREE.Color(0x000000);
 
-        this.renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            powerPreference: 'high-performance',
-        });
+        // shared renderer
+        if (!globalForThree.sharedRenderer) {
+            globalForThree.sharedRenderer = new THREE.WebGLRenderer({
+                antialias: false,
+                powerPreference: 'high-performance',
+            });
+            globalForThree.sharedRenderer.setPixelRatio(1);
+            globalForThree.sharedRenderer.shadowMap.enabled = true;
+            globalForThree.sharedRenderer.shadowMap.type = THREE.BasicShadowMap;
+            globalForThree.sharedRenderer.toneMapping = THREE.ReinhardToneMapping;
+            globalForThree.sharedRenderer.toneMappingExposure = 1.5;
+        }
+        this.renderer = globalForThree.sharedRenderer;
+
+        // reset
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(1);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.BasicShadowMap;
-        this.renderer.toneMapping = THREE.ReinhardToneMapping;
-        this.renderer.toneMappingExposure = 1.5;
+        this.renderer.setScissorTest(false);
+        this.renderer.clear();
+
         container.appendChild(this.renderer.domElement);
 
         // lighting
         const ambient = new THREE.AmbientLight(AMBIENT_COLOR, AMBIENT_INTENSITY);
         this.scene.add(ambient);
-
 
         const accent = new THREE.PointLight(ACCENT_COLOR, ACCENT_INTENSITY, 30);
         accent.position.set(
@@ -63,14 +71,11 @@ export class GameScene {
         const renderPass = new RenderPass(this.scene, new THREE.Camera());
         this.composer.addPass(renderPass);
 
-
-
         this.ps1Pass = new ShaderPass(PS1Shader as never);
         this.ps1Pass.uniforms['uResolution'].value = [320, 240];
         this.ps1Pass.uniforms['uColorDepth'].value = 32.0;
         this.ps1Pass.uniforms['uDither'].value = 1.0;
         this.composer.addPass(this.ps1Pass);
-
 
         this.vignettePass = new ShaderPass(VignetteShader as never);
         this.vignettePass.uniforms['uStrength'].value = VIGNETTE_BASE;
@@ -84,9 +89,7 @@ export class GameScene {
 
     //  Render
     render(camera: THREE.Camera, time: number): void {
-
         (this.composer.passes[0] as RenderPass).camera = camera;
-
         this.grainPass.uniforms['uTime'].value = time;
         this.composer.render();
     }
@@ -110,8 +113,6 @@ export class GameScene {
     }
 
     dispose(): void {
-        this.renderer.dispose();
-        this.renderer.forceContextLoss();
         const domElement = this.renderer.domElement;
         if (domElement && domElement.parentNode) {
             domElement.parentNode.removeChild(domElement);

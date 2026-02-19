@@ -34,14 +34,13 @@ export class Game {
     private rafId = 0;
     private lastTime = 0;
     private running = false;
+    private isDisposed = false;
     private locked = false;
     private won = false;
     private elapsed = 0;
     private exitPos!: THREE.Vector3;
 
     constructor(container: HTMLElement) {
-        this.running = true;
-
         // scene + renderer
         this.gameScene = new GameScene(container);
 
@@ -50,25 +49,23 @@ export class Game {
     }
 
     async init(): Promise<void> {
-        if (!this.running) this.running = true;
         await this.loadLevel();
-        if (this.running) {
+        if (!this.isDisposed) {
             this.start();
         }
     }
 
     private async loadLevel(): Promise<void> {
-        if (!this.running) return;
-
+        if (this.isDisposed) return;
 
         this.loadingScreen.setProgress(10);
         this.hud?.showHint(false);
 
         await new Promise(r => requestAnimationFrame(r));
-        if (!this.running) return;
+        if (this.isDisposed) return;
 
         await new Promise(r => setTimeout(r, 50));
-        if (!this.running) return;
+        if (this.isDisposed) return;
 
         const { scene, renderer } = this.gameScene;
 
@@ -302,6 +299,7 @@ export class Game {
     // Cleanup
 
     dispose(): void {
+        this.isDisposed = true;
         this.running = false;
         cancelAnimationFrame(this.rafId);
 
