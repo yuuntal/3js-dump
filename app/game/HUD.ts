@@ -199,11 +199,6 @@ export class HUD {
             this.messageEl.textContent = t > 0.7 ? 'IT\'S RIGHT BEHIND YOU' : 'SOMETHING IS NEAR...';
             this.messageEl.style.opacity = String(0.3 + t * 0.7);
         } else {
-            // Check if we are currently showing a proximity message to clear it
-            // We should not clear if it's a generic message (like 'IT SAW YOU') which uses showMessage
-            // But showMessage sets opacity to 1 and uses a timer.
-            // Proximity messages are continuous.
-            // Let's just clear opacity if the text matches proximity strings
             if (this.messageEl.textContent === 'SOMETHING IS NEAR...' ||
                 this.messageEl.textContent === 'IT\'S RIGHT BEHIND YOU') {
                 this.messageEl.style.opacity = '0';

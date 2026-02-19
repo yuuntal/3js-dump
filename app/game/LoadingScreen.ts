@@ -67,4 +67,9 @@ export class LoadingScreen {
             }
         }, 500);
     }
+    dispose(): void {
+        if (this.root && this.root.parentElement) {
+            this.root.parentElement.removeChild(this.root);
+        }
+    }
 }

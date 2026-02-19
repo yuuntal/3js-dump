@@ -111,5 +111,12 @@ export class GameScene {
 
     dispose(): void {
         this.renderer.dispose();
+        this.renderer.forceContextLoss();
+        const domElement = this.renderer.domElement;
+        if (domElement && domElement.parentNode) {
+            domElement.parentNode.removeChild(domElement);
+        }
+
+        this.composer.dispose();
     }
 }

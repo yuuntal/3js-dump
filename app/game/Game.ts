@@ -40,6 +40,8 @@ export class Game {
     private exitPos!: THREE.Vector3;
 
     constructor(container: HTMLElement) {
+        this.running = true;
+
         // scene + renderer
         this.gameScene = new GameScene(container);
 
@@ -48,22 +50,29 @@ export class Game {
     }
 
     async init(): Promise<void> {
+        if (!this.running) this.running = true;
         await this.loadLevel();
-        this.start();
+        if (this.running) {
+            this.start();
+        }
     }
 
     private async loadLevel(): Promise<void> {
-        // 1. Show loading
-        this.loadingScreen.setProgress(10);
-        this.hud?.showHint(false); // hide hint during load if present
+        if (!this.running) return;
 
-        // Wait for UI to render
+
+        this.loadingScreen.setProgress(10);
+        this.hud?.showHint(false);
+
         await new Promise(r => requestAnimationFrame(r));
-        await new Promise(r => setTimeout(r, 50)); // small buffer
+        if (!this.running) return;
+
+        await new Promise(r => setTimeout(r, 50));
+        if (!this.running) return;
 
         const { scene, renderer } = this.gameScene;
 
-        // 2. Heavy work
+
         this.loadingScreen.setProgress(30);
 
         // maze
@@ -99,7 +108,8 @@ export class Game {
         };
 
         this.enemy.onNear = (dist: number) => {
-            const t = 1 - (dist / ENEMY_WARN_DIST); // 0 = far, 1 = very close
+            // 0 = far, 1 = very close
+            const t = 1 - (dist / ENEMY_WARN_DIST);
             this.audio.setDroneIntensity(t);
         };
 
@@ -108,7 +118,7 @@ export class Game {
         // audio
         this.audio = new AudioManager(this.player.camera);
 
-        // HUD - reuse existing if available, or create
+        // HUD
         if (!this.hud) {
             this.hud = new HUD(this.gameScene.renderer.domElement.parentElement!);
         }
@@ -119,14 +129,14 @@ export class Game {
         this.elapsed = 0;
         this.hud.setSanity(this.sanity);
         this.hud.setFlashlightOn(true);
-        this.hud.showHint(true); // show hint at start of level
+        this.hud.showHint(true);
 
-        // Bind restart
+        // restart
         this.hud.onRestart = () => {
             this.restart();
         };
 
-        // pointer lock - ensure listeners are bound (idempotent)
+        // pointer lock
         renderer.domElement.removeEventListener('click', this.onCanvasClick);
         document.removeEventListener('pointerlockchange', this.onPointerLockChange);
         renderer.domElement.addEventListener('click', this.onCanvasClick);
@@ -143,11 +153,10 @@ export class Game {
 
         this.loadingScreen.setProgress(85);
 
-        // Force shader compilation
+        // compile shader
         this.gameScene.renderer.compile(this.gameScene.scene, this.player.camera);
 
-        // WARMUP RENDER to fix lag spike
-        // Render from different angles to ensure all geometry/shadows are hot
+        // warm up
         const originalRot = this.player.camera.rotation.clone();
         const angles = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
         for (const ang of angles) {
@@ -168,7 +177,7 @@ export class Game {
         this.running = false;
         if (this.rafId) cancelAnimationFrame(this.rafId);
 
-        // Dispose level assets
+        // dispose
         if (this.mazeBuilder) this.mazeBuilder.dispose();
         if (this.player) {
             this.gameScene.scene.remove(this.player.camera);
@@ -178,7 +187,6 @@ export class Game {
         if (this.enemy) this.enemy.dispose();
         if (this.audio) this.audio.dispose();
 
-        // We keep GameScene (renderer/composer) and HUD instance, but reset HUD state in loadLevel
     }
 
     async restart(): Promise<void> {
@@ -306,6 +314,7 @@ export class Game {
         this.enemy.dispose();
         this.audio.dispose();
         this.mazeBuilder.dispose();
+        this.loadingScreen.dispose();
         this.hud.dispose();
         this.gameScene.dispose();
     }
