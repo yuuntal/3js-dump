@@ -15,17 +15,20 @@ import {
     EXIT_COL, EXIT_ROW, CELL_SIZE, EXIT_TRIGGER_DIST,
 } from './constants';
 
+import { LoadingScreen } from './LoadingScreen';
+
 // Game 
 
 export class Game {
     private gameScene: GameScene;
-    private player: Player;
-    private flashlight: Flashlight;
-    private camEffects: CameraEffects;
-    private enemy: Enemy;
-    private audio: AudioManager;
-    private hud: HUD;
-    private mazeBuilder: MazeBuilder;
+    private loadingScreen: LoadingScreen;
+    private player!: Player;
+    private flashlight!: Flashlight;
+    private camEffects!: CameraEffects;
+    private enemy!: Enemy;
+    private audio!: AudioManager;
+    private hud!: HUD;
+    private mazeBuilder!: MazeBuilder;
 
     private sanity = SANITY_MAX;
     private rafId = 0;
@@ -34,18 +37,37 @@ export class Game {
     private locked = false;
     private won = false;
     private elapsed = 0;
-    private readonly exitPos: THREE.Vector3;
+    private exitPos!: THREE.Vector3;
 
     constructor(container: HTMLElement) {
-        // cene + renderer
+        // scene + renderer
         this.gameScene = new GameScene(container);
+
+        // loading screen
+        this.loadingScreen = new LoadingScreen(container);
+    }
+
+    async init(): Promise<void> {
+        // 1. Show loading
+        this.loadingScreen.setProgress(10);
+
+        // Wait for UI to render
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => setTimeout(r, 50)); // small buffer
+
         const { scene, renderer } = this.gameScene;
+
+        // 2. Heavy work
+        this.loadingScreen.setProgress(30);
 
         // maze
         const grid = generateMaze();
         this.mazeBuilder = new MazeBuilder(scene);
         this.mazeBuilder.build(grid);
         const walls = buildWallAABBs(grid);
+
+        this.loadingScreen.setProgress(50);
+        await new Promise(r => setTimeout(r, 20));
 
         // player / camera
         const aspect = window.innerWidth / window.innerHeight;
@@ -75,11 +97,14 @@ export class Game {
             this.audio.setDroneIntensity(t);
         };
 
+        this.loadingScreen.setProgress(70);
+
         // audio
         this.audio = new AudioManager(this.player.camera);
 
-        // HUD
-        this.hud = new HUD(container);
+        // HUD - needs to be added after loading screen or handled gracefully? 
+        // We pass the same container.
+        this.hud = new HUD(this.gameScene.renderer.domElement.parentElement!);
         this.hud.setSanity(this.sanity);
         this.hud.setFlashlightOn(true);
         this.hud.showHint(true);
@@ -95,6 +120,17 @@ export class Game {
         this.exitPos = new THREE.Vector3(
             EXIT_COL * CELL_SIZE, 0, EXIT_ROW * CELL_SIZE,
         );
+
+        this.loadingScreen.setProgress(90);
+
+        // Force shader compilation to avoid lag
+        this.gameScene.renderer.compile(this.gameScene.scene, this.player.camera);
+
+        this.loadingScreen.setProgress(100);
+        await new Promise(r => setTimeout(r, 200));
+
+        this.loadingScreen.hide();
+        this.start();
     }
 
     // Event handlers

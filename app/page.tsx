@@ -9,7 +9,7 @@ export default function Home() {
 		if (!containerRef.current) return;
 
 		const game = new Game(containerRef.current);
-		game.start();
+		game.init();
 
 		// cleanup
 		return () => {

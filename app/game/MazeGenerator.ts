@@ -218,6 +218,12 @@ export class MazeBuilder {
         const hWallGeo = new THREE.BoxGeometry(CELL_SIZE + WALL_THICKNESS, WALL_HEIGHT, WALL_THICKNESS);
         const vWallGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE + WALL_THICKNESS);
         const tileGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
+        const bulbGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const bulbMat = new THREE.MeshStandardMaterial({
+            color: 0xffcc88,
+            emissive: 0xffdd99,
+            emissiveIntensity: 5.0,
+        });
 
         for (let r = 0; r < MAZE_ROWS; r++) {
             for (let c = 0; c < MAZE_COLS; c++) {
@@ -284,12 +290,6 @@ export class MazeBuilder {
                     this.lights.push(pl);
 
                     // bulb mesh - ceiling
-                    const bulbGeo = new THREE.SphereGeometry(0.08, 8, 8);
-                    const bulbMat = new THREE.MeshStandardMaterial({
-                        color: 0xffcc88,
-                        emissive: 0xffdd99,
-                        emissiveIntensity: 5.0,
-                    });
                     const bulb = new THREE.Mesh(bulbGeo, bulbMat);
                     bulb.position.set(cx, WALL_HEIGHT - 0.06, cz);
                     this.scene.add(bulb);
