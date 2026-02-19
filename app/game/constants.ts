@@ -4,6 +4,9 @@ export const MAZE_ROWS = 17;
 export const CELL_SIZE = 4;
 export const WALL_HEIGHT = 3;
 export const WALL_THICKNESS = 0.3;
+export const EXIT_COL = MAZE_COLS - 1;
+export const EXIT_ROW = MAZE_ROWS - 1;
+export const EXIT_TRIGGER_DIST = 1.8;
 
 
 export const PLAYER_SPEED = 5;
@@ -49,7 +52,7 @@ export const ACCENT_INTENSITY = 1.2;
 // Enemy
 export const ENEMY_SPEED = 2.2;
 export const ENEMY_TRIGGER_DIST = 2.5;
-export const ENEMY_WARN_DIST = 6;
+export const ENEMY_WARN_DIST = 14;
 export const ENEMY_WAYPOINT_DIST = 0.4;
 export const ENEMY_RESPAWN_DELAY = 5000;
 

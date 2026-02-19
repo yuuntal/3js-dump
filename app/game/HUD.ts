@@ -132,8 +132,8 @@ export class HUD {
             inset: '0',
             pointerEvents: 'none',
             opacity: '0',
-            transition: 'opacity 0.2s ease',
-            boxShadow: 'inset 0 0 80px 30px rgba(180,0,0,0.7)',
+            transition: 'opacity 0.15s ease',
+            boxShadow: 'inset 0 0 120px 60px rgba(200,0,0,0.8), inset 0 0 40px 10px rgba(255,30,0,0.5)',
         });
 
         this.root.appendChild(this.flashEl);
@@ -187,11 +187,73 @@ export class HUD {
 
     /* 0 = safe, 1 = very close */
     setProximity(t: number): void {
-
         const pulse = t > 0.01
-            ? t * (0.6 + 0.4 * Math.sin(Date.now() * 0.006))
+            ? t * (0.5 + 0.5 * Math.sin(Date.now() * 0.01))
             : 0;
         this.proximityEl.style.opacity = String(Math.max(0, Math.min(1, pulse)));
+
+        // show warning text when moderately close
+        if (t > 0.3) {
+            this.messageEl.textContent = t > 0.7 ? 'IT\'S RIGHT BEHIND YOU' : 'SOMETHING IS NEAR...';
+            this.messageEl.style.opacity = String(0.3 + t * 0.7);
+        }
+    }
+
+    showWin(): void {
+        const overlay = document.createElement('div');
+        Object.assign(overlay.style, {
+            position: 'absolute',
+            inset: '0',
+            background: 'rgba(0,0,0,0)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: '999',
+            transition: 'background 2s ease',
+        });
+
+        const title = document.createElement('div');
+        Object.assign(title.style, {
+            fontSize: '42px',
+            letterSpacing: '12px',
+            color: '#00ffaa',
+            textShadow: '0 0 40px #00ffaa, 0 0 80px #00aa66',
+            opacity: '0',
+            transition: 'opacity 1.5s ease',
+            fontFamily: '"Courier New", monospace',
+        });
+        title.textContent = 'YOU ESCAPED';
+
+        const sub = document.createElement('div');
+        Object.assign(sub.style, {
+            fontSize: '13px',
+            letterSpacing: '3px',
+            color: 'rgba(200,255,220,0.6)',
+            marginTop: '24px',
+            opacity: '0',
+            transition: 'opacity 2s ease 1s',
+            fontFamily: '"Courier New", monospace',
+        });
+        sub.textContent = 'CLICK TO PLAY AGAIN';
+
+        overlay.appendChild(title);
+        overlay.appendChild(sub);
+        this.root.appendChild(overlay);
+
+        // animate in
+        requestAnimationFrame(() => {
+            overlay.style.background = 'rgba(0,0,0,0.85)';
+            title.style.opacity = '1';
+            sub.style.opacity = '1';
+        });
+
+        // click to reload
+        overlay.style.pointerEvents = 'auto';
+        overlay.style.cursor = 'pointer';
+        overlay.addEventListener('click', () => {
+            window.location.reload();
+        });
     }
 
     dispose(): void {

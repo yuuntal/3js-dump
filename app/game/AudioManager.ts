@@ -11,7 +11,7 @@ export class AudioManager implements Disposable {
 
 
     private footstepTimer = 0;
-    private stepInterval = 0.42; 
+    private stepInterval = 0.42;
 
     constructor(camera: THREE.Camera) {
         this.listener = new THREE.AudioListener();
@@ -56,12 +56,50 @@ export class AudioManager implements Disposable {
 
     setDroneIntensity(t: number): void {
         if (!this.droneGain || !this.ctx) return;
-        const vol = 0.08 + t * 0.18;
+        const vol = 0.08 + t * 0.35;
         this.droneGain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.1);
 
+        this.droneOsc?.frequency.linearRampToValueAtTime(55 + t * 50, this.ctx.currentTime + 0.2);
+        this.droneOsc2?.frequency.linearRampToValueAtTime(56.3 + t * 50, this.ctx.currentTime + 0.2);
 
-        this.droneOsc?.frequency.linearRampToValueAtTime(55 + t * 30, this.ctx.currentTime + 0.2);
-        this.droneOsc2?.frequency.linearRampToValueAtTime(56.3 + t * 30, this.ctx.currentTime + 0.2);
+        // heartbeat — faster as enemy gets closer
+        if (t > 0.05) {
+            const interval = 0.8 - t * 0.5; // 0.8s → 0.3s
+            this.heartbeatTimer += 1 / 60;
+            if (this.heartbeatTimer >= interval) {
+                this.heartbeatTimer = 0;
+                this.playHeartbeat(t);
+            }
+        } else {
+            this.heartbeatTimer = 0;
+        }
+    }
+
+    private heartbeatTimer = 0;
+
+    private playHeartbeat(intensity: number): void {
+        if (!this.ctx) return;
+
+        const vol = 0.15 + intensity * 0.4;
+
+        // double thump (lub-dub)
+        for (let i = 0; i < 2; i++) {
+            const time = this.ctx.currentTime + i * 0.1;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(50, time);
+            osc.frequency.exponentialRampToValueAtTime(30, time + 0.08);
+
+            gain.gain.setValueAtTime(vol * (i === 0 ? 1 : 0.6), time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(time);
+            osc.stop(time + 0.12);
+        }
     }
 
     //  Footsteps

@@ -7,6 +7,7 @@ import {
 import {
     MAZE_COLS, MAZE_ROWS,
     CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS,
+    EXIT_COL, EXIT_ROW,
 } from './constants';
 
 function makeGrid(): MazeGrid {
@@ -295,6 +296,50 @@ export class MazeBuilder {
                 }
             }
         }
+
+        // exit marker at far corner
+        this.buildExitMarker();
+    }
+
+    private buildExitMarker(): void {
+        const ex = EXIT_COL * CELL_SIZE;
+        const ez = EXIT_ROW * CELL_SIZE;
+
+        // glowing floor ring
+        const ringGeo = new THREE.RingGeometry(0.6, 0.9, 24);
+        const ringMat = new THREE.MeshStandardMaterial({
+            color: 0x00ffaa,
+            emissive: 0x00ffaa,
+            emissiveIntensity: 3.0,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.8,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(ex, 0.02, ez);
+        this.scene.add(ring);
+
+        // vertical light beam
+        const beamGeo = new THREE.CylinderGeometry(0.15, 0.5, WALL_HEIGHT, 8, 1, true);
+        const beamMat = new THREE.MeshStandardMaterial({
+            color: 0x00ffcc,
+            emissive: 0x00ffcc,
+            emissiveIntensity: 2.0,
+            transparent: true,
+            opacity: 0.25,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        });
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        beam.position.set(ex, WALL_HEIGHT / 2, ez);
+        this.scene.add(beam);
+
+        // bright point light
+        const exitLight = new THREE.PointLight(0x00ffaa, 3.0, 12, 1.2);
+        exitLight.position.set(ex, WALL_HEIGHT * 0.6, ez);
+        this.scene.add(exitLight);
+        this.lights.push(exitLight);
     }
 
     dispose(): void {

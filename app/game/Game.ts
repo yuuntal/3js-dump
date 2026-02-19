@@ -12,6 +12,7 @@ import {
     SANITY_MAX, SANITY_DRAIN_NEAR, SANITY_REGEN, SANITY_JUMPSCARE_HIT,
     VIGNETTE_BASE, VIGNETTE_MAX,
     ENEMY_WARN_DIST,
+    EXIT_COL, EXIT_ROW, CELL_SIZE, EXIT_TRIGGER_DIST,
 } from './constants';
 
 // Game 
@@ -31,6 +32,9 @@ export class Game {
     private lastTime = 0;
     private running = false;
     private locked = false;
+    private won = false;
+    private elapsed = 0;
+    private readonly exitPos: THREE.Vector3;
 
     constructor(container: HTMLElement) {
         // cene + renderer
@@ -86,6 +90,11 @@ export class Game {
 
         // resize 
         window.addEventListener('resize', this.onResize);
+
+        // exit position
+        this.exitPos = new THREE.Vector3(
+            EXIT_COL * CELL_SIZE, 0, EXIT_ROW * CELL_SIZE,
+        );
     }
 
     // Event handlers
@@ -135,6 +144,9 @@ export class Game {
     };
 
     private update(dt: number, time: number): void {
+        if (this.won) return;
+
+        this.elapsed += dt;
         const { isMoving, isSprinting } = this.player.state;
 
         // player movement + look
@@ -147,12 +159,22 @@ export class Game {
         this.flashlight.update(dt);
         this.hud.setFlashlightOn(this.flashlight.isOn);
 
-        // enemy
+        // enemy — escalates speed over time (+30% per minute)
+        const speedMult = 1 + this.elapsed * 0.005;
         const playerHidden = !this.flashlight.isOn && !isMoving;
-        this.enemy.update(dt, this.player.position, playerHidden);
+        this.enemy.update(dt * speedMult, this.player.position, playerHidden);
 
         // audio footsteps
         this.audio.update(dt, isMoving, isSprinting);
+
+        // exit check
+        const exitDist = this.player.position.distanceTo(this.exitPos);
+        if (exitDist < EXIT_TRIGGER_DIST) {
+            this.won = true;
+            document.exitPointerLock();
+            this.hud.showWin();
+            return;
+        }
 
         // sanity
         const enemyDist = this.enemy.mesh.position.distanceTo(this.player.position);
@@ -169,7 +191,8 @@ export class Game {
         // proximity warn
         const proximityT = nearEnemy ? 1 - (enemyDist / ENEMY_WARN_DIST) : 0;
         this.hud.setProximity(proximityT);
-        if (proximityT > 0.3) this.flashlight.forceFlicker();
+        if (proximityT > 0.15) this.flashlight.forceFlicker();
+        if (proximityT > 0.5) this.camEffects.addTrauma(0.05 * dt);
 
         // vignette strength increases as sanity drops
         const sanityT = 1 - this.sanity / SANITY_MAX;
